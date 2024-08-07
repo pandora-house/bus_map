@@ -60,27 +60,12 @@ class _MapViewState extends State<MapView> {
     );
     _busesSub = widget.busStream.listen((buses) async {
       _buses = buses;
-      _markersController.buildBus(
+      await _markersController.buildBus(
         _buses,
         onTap: _onBusTap,
       );
 
-      await Future.delayed(const Duration(milliseconds: 200));
-
-      if (_busTap != null) {
-        final meta = _buses.firstWhereOrNull((e) => e.id == _busTap!.id);
-        if (meta == null) return;
-
-        await _mapController?.moveCamera(
-          animation: const MapAnimation(type: MapAnimationType.linear, duration: 1),
-          CameraUpdate.newCameraPosition(
-            CameraPosition(
-              target: meta.point,
-              zoom: 25,
-            ),
-          ),
-        );
-      }
+      await _updateBusCameraPos();
     });
   }
 
@@ -103,6 +88,24 @@ class _MapViewState extends State<MapView> {
             longitude: 37.903443,
           ),
           zoom: _initCameraZoom,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _updateBusCameraPos() async {
+    if (_busTap == null) return;
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    final meta = _buses.firstWhereOrNull((e) => e.id == _busTap!.id);
+    if (meta == null) return;
+
+    await _mapController?.moveCamera(
+      animation: const MapAnimation(type: MapAnimationType.linear, duration: 1),
+      CameraUpdate.newCameraPosition(
+        CameraPosition(
+          target: meta.point,
+          zoom: 25,
         ),
       ),
     );
@@ -172,6 +175,39 @@ class _MapViewState extends State<MapView> {
     );
   }
 
+  void _scaleBuses(CameraPosition pos) {
+    if (pos.zoom > 13 && _markersController.busScale != 2) {
+      _markersController.buildBus(
+        _buses,
+        onTap: _onBusTap,
+        scale: 2,
+      );
+    } else if (pos.zoom <= 13 &&
+        pos.zoom > 12 &&
+        _markersController.busScale != 1.5) {
+      _markersController.buildBus(
+        _buses,
+        onTap: _onBusTap,
+        scale: 1.5,
+      );
+    } else if (pos.zoom <= 12 &&
+        pos.zoom > 11 &&
+        _markersController.busScale != 1) {
+      _markersController.buildBus(
+        _buses,
+        onTap: _onBusTap,
+        scale: 1,
+      );
+    } else if (pos.zoom <= 11 &&
+        _markersController.busScale != 0.7) {
+      _markersController.buildBus(
+        _buses,
+        onTap: _onBusTap,
+        scale: 0.7,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -183,36 +219,7 @@ class _MapViewState extends State<MapView> {
               return YandexMap(
                 mapObjects: objects,
                 onCameraPositionChanged: (pos, reason, _) {
-                  if (pos.zoom > 13 && _markersController.busScale != 2) {
-                    _markersController.buildBus(
-                      _buses,
-                      onTap: _onBusTap,
-                      scale: 2,
-                    );
-                  } else if (pos.zoom <= 13 &&
-                      pos.zoom > 12 &&
-                      _markersController.busScale != 1.5) {
-                    _markersController.buildBus(
-                      _buses,
-                      onTap: _onBusTap,
-                      scale: 1.5,
-                    );
-                  } else if (pos.zoom <= 12 &&
-                      pos.zoom > 11 &&
-                      _markersController.busScale != 1) {
-                    _markersController.buildBus(
-                      _buses,
-                      onTap: _onBusTap,
-                      scale: 1,
-                    );
-                  } else if (pos.zoom <= 11 &&
-                      _markersController.busScale != 0.7) {
-                    _markersController.buildBus(
-                      _buses,
-                      onTap: _onBusTap,
-                      scale: 0.7,
-                    );
-                  }
+                  _scaleBuses(pos);
                 },
                 onMapCreated: (controller) async {
                   _mapController = controller;
