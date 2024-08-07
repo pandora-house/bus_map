@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bus_map/map/models/bus_data.dart';
 import 'package:bus_map/map/models/bus_stop_data.dart';
+import 'package:bus_map/map/widgets/modals.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:yandex_mapkit/yandex_mapkit.dart';
@@ -25,6 +26,35 @@ class _MapViewState extends State<MapView> {
 
   StreamSubscription<Position>? _userPositionSub;
   Position? _currentUserPos;
+
+  static const _initCameraZoom = 13.0;
+
+  final _buses = <PointMeta<BusData>>[
+    const PointMeta<BusData>(
+      id: 'bus-409',
+      point: Point(
+        latitude: 59.122672,
+        longitude: 37.913443,
+      ),
+      text: '409',
+      data: BusData(
+        route: 'Азотный комплекс - ЗШК',
+        number: '409',
+      ),
+    ),
+    const PointMeta<BusData>(
+      id: 'bus-109',
+      point: Point(
+        latitude: 59.122672,
+        longitude: 37.915443,
+      ),
+      text: '109',
+      data: BusData(
+        route: 'Азотный комплекс - ЗШК',
+        number: '109',
+      ),
+    ),
+  ];
 
   @override
   void initState() {
@@ -66,28 +96,25 @@ class _MapViewState extends State<MapView> {
             street: 'Сталинградская, 19',
           ),
         ),
+        const PointMeta<BusStopData>(
+          id: 'stop-102',
+          point: Point(
+            latitude: 59.099550,
+            longitude: 37.916079,
+          ),
+          text: '102',
+          data: BusStopData(
+            shortName: '102',
+            name: '102-микрорайон',
+            street: 'Сталинградская, 19',
+          ),
+        ),
       ],
       onTap: _onStopTap,
     );
     _markersController.buildBus(
-      [
-        const PointMeta<BusData>(
-          id: 'bus-409',
-          point: Point(
-            latitude: 59.122672,
-            longitude: 37.913443,
-          ),
-          text: '409',
-          data: BusData(
-            route: 'Азотный комплекс - ЗШК',
-            number: '409',
-          ),
-        ),
-      ],
-      onTap: (value) {
-        final data = value.data as BusData;
-        _showModal('Автобус ${value.text}');
-      },
+      _buses,
+      onTap: _onBusTap,
     );
   }
 
@@ -108,7 +135,7 @@ class _MapViewState extends State<MapView> {
             latitude: 59.122672,
             longitude: 37.903443,
           ),
-          zoom: 13,
+          zoom: _initCameraZoom,
         ),
       ),
     );
@@ -137,52 +164,39 @@ class _MapViewState extends State<MapView> {
     );
   }
 
-  Future<void> _onStopTap(PointMeta value) async {
+  Future<void> _onStopTap(PointMeta meta) async {
+    _markersController.showStopPressed(meta);
+    final data = meta.data as BusStopData;
+
+    Modals.showBusStop(context).then((_) {
+      _markersController.hideStopPressed(meta);
+    });
+
     await _mapController?.moveCamera(
       CameraUpdate.newCameraPosition(
         CameraPosition(
-          target: value.point,
-          zoom: 20,
+          target: meta.point,
+          zoom: 25,
         ),
       ),
     );
-
-    _markersController.buildStopPressed(value);
-    final data = value.data as BusStopData;
-    _showModal('Остановка ${value.text}').then((_) {
-      //todo hide icon on close
-    });
   }
 
-  Future<void> _showModal(String text) {
-    return showModalBottomSheet(
-      useRootNavigator: true,
-      barrierColor: Colors.transparent,
-      backgroundColor: Colors.transparent,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(20),
+  Future<void> _onBusTap(PointMeta meta) async {
+    // _markersController.showStopPressed(meta);
+    final data = meta.data as BusData;
+
+    Modals.showBus(context).then((_) {
+      _markersController.hideStopPressed(meta);
+    });
+
+    await _mapController?.moveCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(
+          target: meta.point,
+          zoom: 25,
         ),
       ),
-      clipBehavior: Clip.antiAliasWithSaveLayer,
-      context: context,
-      builder: (BuildContext context) {
-        return Container(
-          height: 300,
-          margin: EdgeInsets.only(top: 3),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            boxShadow: [
-              BoxShadow(
-                offset: Offset(0, 0),
-                color: Colors.grey,
-                blurRadius: 20.0,
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 
@@ -196,6 +210,38 @@ class _MapViewState extends State<MapView> {
             builder: (context, objects, _) {
               return YandexMap(
                 mapObjects: objects,
+                onCameraPositionChanged: (pos, reason, _) {
+                  if (pos.zoom > 13 && _markersController.busScale != 2) {
+                    _markersController.buildBus(
+                      _buses,
+                      onTap: _onBusTap,
+                      scale: 2,
+                    );
+                  } else if (pos.zoom <= 13 &&
+                      pos.zoom > 12 &&
+                      _markersController.busScale != 1.5) {
+                    _markersController.buildBus(
+                      _buses,
+                      onTap: _onBusTap,
+                      scale: 1.5,
+                    );
+                  } else if (pos.zoom <= 12 &&
+                      pos.zoom > 11 &&
+                      _markersController.busScale != 1) {
+                    _markersController.buildBus(
+                      _buses,
+                      onTap: _onBusTap,
+                      scale: 1,
+                    );
+                  } else if (pos.zoom <= 11 &&
+                      _markersController.busScale != 0.7) {
+                    _markersController.buildBus(
+                      _buses,
+                      onTap: _onBusTap,
+                      scale: 0.7,
+                    );
+                  }
+                },
                 onMapCreated: (controller) async {
                   _mapController = controller;
 

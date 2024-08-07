@@ -18,18 +18,43 @@ class MapMarkersController {
   final _busStopPressedMarkerId =
       const MapObjectId('bus_stop_pressed_placemark');
 
-  var _busObjects = <MapObject<dynamic>>[];
-  var _busStopObjects = <MapObject<dynamic>>[];
-  late MapObject _userObject = PlacemarkMapObject(
+  var _busObjects = <PlacemarkMapObject>[];
+  var _busStopObjects = <PlacemarkMapObject>[];
+  late PlacemarkMapObject _userObject = PlacemarkMapObject(
     mapId: _userMarkerId,
     point: const Point(latitude: 0, longitude: 0),
   );
+  late PlacemarkMapObject _busStopRemovedObject = PlacemarkMapObject(
+    mapId: _userMarkerId,
+    point: const Point(latitude: 0, longitude: 0),
+  );
+
+  double _busScale = 1.5;
+
+  double get busScale => _busScale;
+
+  void _updateMarkers() {
+    _mapObjects.value = [
+      _stopsCluster(_busStopObjects),
+      _userObject,
+      ..._busObjects,
+    ];
+  }
+
+  ClusterizedPlacemarkCollection _stopsCluster(List<PlacemarkMapObject> marks) {
+    return ClusterizedPlacemarkCollection(
+      mapId: const MapObjectId('stop-cluster'),
+      placemarks: marks,
+      radius: 30,
+      minZoom: 15,
+    );
+  }
 
   void buildUser(Point point) {
     _userObject = PlacemarkMapObject(
       mapId: _userMarkerId,
       point: point,
-      opacity: 1,
+      opacity: 0.8,
       zIndex: 3,
       icon: PlacemarkIcon.single(
         PlacemarkIconStyle(
@@ -39,13 +64,13 @@ class MapMarkersController {
         ),
       ),
     );
-    _mapObjects.value = [..._busStopObjects, _userObject, ..._busObjects];
+    _updateMarkers();
   }
 
   Future<void> buildBusStops(List<PointMeta> points,
-      {Function(PointMeta)? onTap}) async {
+      {Function(PointMeta)? onTap, double scale = 2}) async {
     final image = await _loadUiImage('assets/bus_stop_icon.png');
-    _busStopObjects = <MapObject<dynamic>>[];
+    _busStopObjects = <PlacemarkMapObject>[];
     for (final p in points) {
       final imgBytes = await _buildBusStopAppearance(p.text, image);
       final marker = PlacemarkMapObject(
@@ -57,7 +82,7 @@ class MapMarkersController {
           PlacemarkIconStyle(
             anchor: const Offset(0.25, 0.5),
             image: BitmapDescriptor.fromBytes(imgBytes),
-            scale: 2,
+            scale: scale,
           ),
         ),
         onTap: (obj, point) {
@@ -66,35 +91,13 @@ class MapMarkersController {
       );
       _busStopObjects.add(marker);
     }
-    _mapObjects.value = [..._busStopObjects, _userObject, ..._busObjects];
+
+    _updateMarkers();
   }
 
-  Future<void> buildBus(List<PointMeta> points,
-      {Function(PointMeta)? onTap}) async {
-    _busObjects = <MapObject<dynamic>>[];
-    for (final p in points) {
-      final imgBytes = await _buildBusAppearance(p.text);
-      final marker = PlacemarkMapObject(
-        mapId: MapObjectId(p.id),
-        point: p.point,
-        opacity: 1,
-        zIndex: 1,
-        icon: PlacemarkIcon.single(
-          PlacemarkIconStyle(
-            image: BitmapDescriptor.fromBytes(imgBytes),
-            scale: 2,
-          ),
-        ),
-        onTap: (obj, point) {
-          onTap?.call(p);
-        },
-      );
-      _busObjects.add(marker);
-    }
-    _mapObjects.value = [..._busStopObjects, _userObject, ..._busObjects];
-  }
-
-  Future<void> buildStopPressed(PointMeta point) async {
+  Future<void> showStopPressed(PointMeta point) async {
+    _busStopRemovedObject =
+        _busStopObjects.firstWhere((e) => e.mapId == MapObjectId(point.id));
     _busStopObjects = _busStopObjects
       ..removeWhere((e) => e.mapId == MapObjectId(point.id));
     _busStopObjects = _busStopObjects
@@ -114,7 +117,42 @@ class MapMarkersController {
       ),
     );
     _busStopObjects.add(marker);
-    _mapObjects.value = [..._busStopObjects, _userObject, ..._busObjects];
+    _updateMarkers();
+  }
+
+  Future<void> hideStopPressed(PointMeta point) async {
+    _busStopObjects = _busStopObjects
+      ..removeWhere((e) => e.mapId == _busStopPressedMarkerId);
+    _busStopObjects.add(_busStopRemovedObject);
+    _updateMarkers();
+  }
+
+  Future<void> buildBus(List<PointMeta> points,
+      {Function(PointMeta)? onTap, double? scale}) async {
+    if (scale != null) {
+      _busScale = scale;
+    }
+    _busObjects = <PlacemarkMapObject>[];
+    for (final p in points) {
+      final imgBytes = await _buildBusAppearance(p.text);
+      final marker = PlacemarkMapObject(
+        mapId: MapObjectId(p.id),
+        point: p.point,
+        opacity: 1,
+        zIndex: 1,
+        icon: PlacemarkIcon.single(
+          PlacemarkIconStyle(
+            image: BitmapDescriptor.fromBytes(imgBytes),
+            scale: _busScale,
+          ),
+        ),
+        onTap: (obj, point) {
+          onTap?.call(p);
+        },
+      );
+      _busObjects.add(marker);
+    }
+    _updateMarkers();
   }
 
   Future<Uint8List> _buildBusAppearance(String text) async {
