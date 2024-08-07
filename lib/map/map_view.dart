@@ -17,9 +17,11 @@ class MapView extends StatefulWidget {
   const MapView({
     super.key,
     required this.busStream,
+    required this.stops,
   });
 
   final Stream<List<PointMeta<BusData>>> busStream;
+  final List<PointMeta<BusStopData>> stops;
 
   @override
   State<MapView> createState() => _MapViewState();
@@ -53,47 +55,7 @@ class _MapViewState extends State<MapView> {
       });
     });
     _markersController.buildBusStops(
-      [
-        const PointMeta<BusStopData>(
-          id: 'stop-100',
-          point: Point(
-            latitude: 59.139550,
-            longitude: 37.926079,
-          ),
-          text: '100',
-          data: BusStopData(
-            shortName: '100',
-            name: '100-микрорайон',
-            street: 'Ленинградская, 19',
-          ),
-        ),
-        const PointMeta<BusStopData>(
-          id: 'stop-101',
-          point: Point(
-            latitude: 59.139550,
-            longitude: 37.906079,
-          ),
-          text: '101',
-          data: BusStopData(
-            shortName: '101',
-            name: '101-микрорайон',
-            street: 'Сталинградская, 19',
-          ),
-        ),
-        const PointMeta<BusStopData>(
-          id: 'stop-102',
-          point: Point(
-            latitude: 59.099550,
-            longitude: 37.916079,
-          ),
-          text: '102',
-          data: BusStopData(
-            shortName: '102',
-            name: '102-микрорайон',
-            street: 'Сталинградская, 19',
-          ),
-        ),
-      ],
+      widget.stops,
       onTap: _onStopTap,
     );
     _busesSub = widget.busStream.listen((buses) async {
@@ -110,7 +72,7 @@ class _MapViewState extends State<MapView> {
         if (meta == null) return;
 
         await _mapController?.moveCamera(
-          animation: const MapAnimation(),
+          animation: const MapAnimation(type: MapAnimationType.linear, duration: 1),
           CameraUpdate.newCameraPosition(
             CameraPosition(
               target: meta.point,
@@ -187,16 +149,14 @@ class _MapViewState extends State<MapView> {
 
     if (!mounted) return;
     final data = meta.data as BusStopData;
-    Modals.showBusStop(context).then((_) {
+    Modals.showBusStop(context, data).then((_) {
       _markersController.hideStopPressed(meta);
     });
   }
 
   Future<void> _onBusTap(PointMeta meta) async {
-    final data = meta.data as BusData;
     _busTap = meta as PointMeta<BusData>;
-
-    Modals.showBus(context).then((_) {
+    Modals.showBus(context, meta.data).then((_) {
       _busTap = null;
     });
 

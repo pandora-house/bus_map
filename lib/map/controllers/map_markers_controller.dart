@@ -79,7 +79,7 @@ class MapMarkersController {
         mapId: MapObjectId(p.id),
         point: p.point,
         opacity: 1,
-        zIndex: 0,
+        zIndex: 1,
         icon: PlacemarkIcon.single(
           PlacemarkIconStyle(
             anchor: const Offset(0.25, 0.5),
@@ -108,7 +108,7 @@ class MapMarkersController {
       mapId: _busStopPressedMarkerId,
       point: point.point,
       opacity: 1,
-      zIndex: 0,
+      zIndex: 1,
       icon: PlacemarkIcon.single(
         PlacemarkIconStyle(
           image: BitmapDescriptor.fromAssetImage(
@@ -141,7 +141,8 @@ class MapMarkersController {
         mapId: MapObjectId(p.id),
         point: p.point,
         opacity: 1,
-        zIndex: 1,
+        consumeTapEvents: true,
+        zIndex: 0 + (points.indexOf(p) * 0.1),
         icon: PlacemarkIcon.single(
           PlacemarkIconStyle(
             image: BitmapDescriptor.fromBytes(imgBytes),

@@ -1,7 +1,9 @@
+import 'package:bus_map/map/models/bus_data.dart';
+import 'package:bus_map/map/models/bus_stop_data.dart';
 import 'package:flutter/material.dart';
 
 class Modals {
-  static Future<void> _showModal(BuildContext context) {
+  static Future<void> _showModal(BuildContext context, Widget child) {
     return showModalBottomSheet(
       useRootNavigator: true,
       barrierColor: Colors.transparent,
@@ -15,8 +17,9 @@ class Modals {
       context: context,
       builder: (BuildContext context) {
         return Container(
-          height: 300,
           margin: EdgeInsets.only(top: 3),
+          width: double.infinity,
+          padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -28,16 +31,22 @@ class Modals {
               ),
             ],
           ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              child,
+            ],
+          ),
         );
       },
     );
   }
 
-  static Future<void> showBus(BuildContext context) {
-    return _showModal(context);
+  static Future<void> showBus(BuildContext context, BusData data) {
+    return _showModal(context, Text(data.number));
   }
 
-  static Future<void> showBusStop(BuildContext context) {
-    return _showModal(context);
+  static Future<void> showBusStop(BuildContext context, BusStopData data) {
+    return _showModal(context, Text(data.name));
   }
 }
