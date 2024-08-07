@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bus_map/map/models/bus_data.dart';
 import 'package:bus_map/map/models/bus_stop_data.dart';
 import 'package:bus_map/map/widgets/modals.dart';
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:yandex_mapkit/yandex_mapkit.dart';
@@ -13,7 +14,12 @@ import 'models/point_meta.dart';
 import 'widgets/user_locator_button.dart';
 
 class MapView extends StatefulWidget {
-  const MapView({super.key});
+  const MapView({
+    super.key,
+    required this.busStream,
+  });
+
+  final Stream<List<PointMeta<BusData>>> busStream;
 
   @override
   State<MapView> createState() => _MapViewState();
@@ -29,32 +35,10 @@ class _MapViewState extends State<MapView> {
 
   static const _initCameraZoom = 13.0;
 
-  final _buses = <PointMeta<BusData>>[
-    const PointMeta<BusData>(
-      id: 'bus-409',
-      point: Point(
-        latitude: 59.122672,
-        longitude: 37.913443,
-      ),
-      text: '409',
-      data: BusData(
-        route: 'Азотный комплекс - ЗШК',
-        number: '409',
-      ),
-    ),
-    const PointMeta<BusData>(
-      id: 'bus-109',
-      point: Point(
-        latitude: 59.122672,
-        longitude: 37.915443,
-      ),
-      text: '109',
-      data: BusData(
-        route: 'Азотный комплекс - ЗШК',
-        number: '109',
-      ),
-    ),
-  ];
+  var _buses = <PointMeta<BusData>>[];
+  late final StreamSubscription<List<PointMeta<BusData>>> _busesSub;
+
+  PointMeta<BusData>? _busTap;
 
   @override
   void initState() {
@@ -112,14 +96,35 @@ class _MapViewState extends State<MapView> {
       ],
       onTap: _onStopTap,
     );
-    _markersController.buildBus(
-      _buses,
-      onTap: _onBusTap,
-    );
+    _busesSub = widget.busStream.listen((buses) async {
+      _buses = buses;
+      _markersController.buildBus(
+        _buses,
+        onTap: _onBusTap,
+      );
+
+      await Future.delayed(const Duration(milliseconds: 200));
+
+      if (_busTap != null) {
+        final meta = _buses.firstWhereOrNull((e) => e.id == _busTap!.id);
+        if (meta == null) return;
+
+        await _mapController?.moveCamera(
+          animation: const MapAnimation(),
+          CameraUpdate.newCameraPosition(
+            CameraPosition(
+              target: meta.point,
+              zoom: 25,
+            ),
+          ),
+        );
+      }
+    });
   }
 
   @override
   void dispose() {
+    _busesSub.cancel();
     _userPositionSub?.cancel();
     _markersController.dispose();
     _mapController?.dispose();
@@ -164,15 +169,12 @@ class _MapViewState extends State<MapView> {
     );
   }
 
-  Future<void> _onStopTap(PointMeta meta) async {
-    _markersController.showStopPressed(meta);
-    final data = meta.data as BusStopData;
-
-    Modals.showBusStop(context).then((_) {
-      _markersController.hideStopPressed(meta);
-    });
-
-    await _mapController?.moveCamera(
+  void _onStopTap(PointMeta meta) {
+    // анимация кластера сделана нативно, по-этому сначала перемещаем камеру
+    // и итолько потом обновляем маркеры
+    // https://github.com/Unact/yandex_mapkit/issues/175
+    _mapController?.moveCamera(
+      animation: const MapAnimation(duration: 1),
       CameraUpdate.newCameraPosition(
         CameraPosition(
           target: meta.point,
@@ -180,17 +182,27 @@ class _MapViewState extends State<MapView> {
         ),
       ),
     );
+
+    _markersController.showStopPressed(meta);
+
+    if (!mounted) return;
+    final data = meta.data as BusStopData;
+    Modals.showBusStop(context).then((_) {
+      _markersController.hideStopPressed(meta);
+    });
   }
 
   Future<void> _onBusTap(PointMeta meta) async {
-    // _markersController.showStopPressed(meta);
     final data = meta.data as BusData;
+    _busTap = meta as PointMeta<BusData>;
 
     Modals.showBus(context).then((_) {
-      _markersController.hideStopPressed(meta);
+      _busTap = null;
     });
 
+    await Future.delayed(const Duration(milliseconds: 500));
     await _mapController?.moveCamera(
+      animation: const MapAnimation(duration: 1),
       CameraUpdate.newCameraPosition(
         CameraPosition(
           target: meta.point,

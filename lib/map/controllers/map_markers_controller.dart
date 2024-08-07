@@ -17,6 +17,7 @@ class MapMarkersController {
   final _userMarkerId = const MapObjectId('user_placemark');
   final _busStopPressedMarkerId =
       const MapObjectId('bus_stop_pressed_placemark');
+  final _busStopClusterMarkerId = const MapObjectId('stop-cluster');
 
   var _busObjects = <PlacemarkMapObject>[];
   var _busStopObjects = <PlacemarkMapObject>[];
@@ -43,10 +44,11 @@ class MapMarkersController {
 
   ClusterizedPlacemarkCollection _stopsCluster(List<PlacemarkMapObject> marks) {
     return ClusterizedPlacemarkCollection(
-      mapId: const MapObjectId('stop-cluster'),
+      mapId: _busStopClusterMarkerId,
       placemarks: marks,
       radius: 30,
       minZoom: 15,
+      consumeTapEvents: true,
     );
   }
 
