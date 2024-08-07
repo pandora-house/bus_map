@@ -31,8 +31,11 @@ class MapMarkersController {
   );
 
   double _busScale = 1.5;
+  double _stopScale = 1.5;
 
   double get busScale => _busScale;
+
+  double get stopScale => _stopScale;
 
   void _updateMarkers() {
     _mapObjects.value = [
@@ -46,8 +49,8 @@ class MapMarkersController {
     return ClusterizedPlacemarkCollection(
       mapId: _busStopClusterMarkerId,
       placemarks: marks,
-      radius: 30,
-      minZoom: 15,
+      radius: 12,
+      minZoom: 20,
       consumeTapEvents: true,
     );
   }
@@ -70,11 +73,15 @@ class MapMarkersController {
   }
 
   Future<void> buildBusStops(List<PointMeta> points,
-      {Function(PointMeta)? onTap, double scale = 2}) async {
+      {Function(PointMeta)? onTap, double? scale}) async {
+    if (scale != null) {
+      _stopScale = scale;
+    }
+
     final image = await _loadUiImage('assets/bus_stop_icon.png');
     _busStopObjects = <PlacemarkMapObject>[];
     for (final p in points) {
-      final imgBytes = await _buildBusStopAppearance(p.text, image);
+      final imgBytes = await _buildBusStopAppearance(p.text, image, _stopScale);
       final marker = PlacemarkMapObject(
         mapId: MapObjectId(p.id),
         point: p.point,
@@ -84,7 +91,7 @@ class MapMarkersController {
           PlacemarkIconStyle(
             anchor: const Offset(0.25, 0.5),
             image: BitmapDescriptor.fromBytes(imgBytes),
-            scale: scale,
+            scale: _stopScale,
           ),
         ),
         onTap: (obj, point) {
@@ -159,8 +166,8 @@ class MapMarkersController {
   }
 
   Future<Uint8List> _buildBusAppearance(String text) async {
-    const radius = 30.0;
-    const size = Size(100, 100);
+    const radius = 25.0;
+    const size = Size(90, 90);
 
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
@@ -225,7 +232,8 @@ class MapMarkersController {
     return pngBytes!.buffer.asUint8List();
   }
 
-  Future<Uint8List> _buildBusStopAppearance(String text, ui.Image pic) async {
+  Future<Uint8List> _buildBusStopAppearance(
+      String text, ui.Image pic, double scale) async {
     const iconSize = 44.0;
     const gapIcon = 2.0;
     const textPadding = 4.0;
@@ -266,39 +274,41 @@ class MapMarkersController {
       8,
     );
 
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(
-          iconSize + gapIcon,
-          0,
-          rectWidth,
-          rectHeight,
+    if (scale >= 1) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(
+            iconSize + gapIcon,
+            0,
+            rectWidth,
+            rectHeight,
+          ),
+          const Radius.circular(4),
         ),
-        const Radius.circular(4),
-      ),
-      fillPaint,
-    );
+        fillPaint,
+      );
 
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(
-          iconSize + gapIcon,
-          0,
-          rectWidth,
-          rectHeight,
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(
+            iconSize + gapIcon,
+            0,
+            rectWidth,
+            rectHeight,
+          ),
+          const Radius.circular(4),
         ),
-        const Radius.circular(4),
-      ),
-      strokePaint,
-    );
+        strokePaint,
+      );
+
+      textPainter.paint(canvas, textOffset);
+    }
 
     canvas.drawImage(
       pic,
       Offset.zero,
       Paint()..style = PaintingStyle.fill,
     );
-
-    textPainter.paint(canvas, textOffset);
 
     final image = await recorder.endRecording().toImage(
           size.width.toInt(),

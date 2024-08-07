@@ -175,36 +175,37 @@ class _MapViewState extends State<MapView> {
     );
   }
 
-  void _scaleBuses(CameraPosition pos) {
+  void _onScale(CameraPosition pos) {
     if (pos.zoom > 13 && _markersController.busScale != 2) {
-      _markersController.buildBus(
-        _buses,
-        onTap: _onBusTap,
-        scale: 2,
-      );
+      _markersController.buildBus(_buses, onTap: _onBusTap, scale: 2);
     } else if (pos.zoom <= 13 &&
         pos.zoom > 12 &&
         _markersController.busScale != 1.5) {
-      _markersController.buildBus(
-        _buses,
-        onTap: _onBusTap,
-        scale: 1.5,
-      );
+      _markersController.buildBus(_buses, onTap: _onBusTap, scale: 1.5);
     } else if (pos.zoom <= 12 &&
         pos.zoom > 11 &&
         _markersController.busScale != 1) {
-      _markersController.buildBus(
-        _buses,
-        onTap: _onBusTap,
-        scale: 1,
-      );
-    } else if (pos.zoom <= 11 &&
-        _markersController.busScale != 0.7) {
-      _markersController.buildBus(
-        _buses,
-        onTap: _onBusTap,
-        scale: 0.7,
-      );
+      _markersController.buildBus(_buses, onTap: _onBusTap, scale: 1);
+    } else if (pos.zoom <= 11 && _markersController.busScale != 0.7) {
+      _markersController.buildBus(_buses, onTap: _onBusTap, scale: 0.7);
+    }
+
+    if (pos.zoom > 13 && _markersController.stopScale != 2) {
+      _markersController.buildBusStops(widget.stops,
+          onTap: _onStopTap, scale: 2);
+    } else if (pos.zoom <= 13 &&
+        pos.zoom > 12 &&
+        _markersController.stopScale != 1.5) {
+      _markersController.buildBusStops(widget.stops,
+          onTap: _onStopTap, scale: 1.5);
+    } else if (pos.zoom <= 12 &&
+        pos.zoom > 11 &&
+        _markersController.stopScale != 1) {
+      _markersController.buildBusStops(widget.stops,
+          onTap: _onStopTap, scale: 1);
+    } else if (pos.zoom <= 11 && _markersController.stopScale != 0.5) {
+      _markersController.buildBusStops(widget.stops,
+          onTap: _onStopTap, scale: 0.5);
     }
   }
 
@@ -219,7 +220,7 @@ class _MapViewState extends State<MapView> {
               return YandexMap(
                 mapObjects: objects,
                 onCameraPositionChanged: (pos, reason, _) {
-                  _scaleBuses(pos);
+                  _onScale(pos);
                 },
                 onMapCreated: (controller) async {
                   _mapController = controller;
