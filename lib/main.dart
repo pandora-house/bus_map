@@ -73,7 +73,7 @@ class _MyAppState extends State<MyApp> {
                 PointMeta<BusData>(
                   id: 'bus-409',
                   point: Point(
-                    latitude: 59.122672 + (value * 1.0000),
+                    latitude: 59.122672 + (value * 0.0001),
                     longitude: 37.913443,
                   ),
                   text: '409',
