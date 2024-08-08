@@ -10,6 +10,14 @@ import 'package:yandex_mapkit/yandex_mapkit.dart';
 import '../models/point_meta.dart';
 
 class MarkersController {
+  MarkersController({
+    required this.onStopMarkerTap,
+    required this.onBusMarkerTap,
+  });
+
+  final void Function(PointMeta meta) onStopMarkerTap;
+  final void Function(PointMeta meta) onBusMarkerTap;
+
   final _mapObjects = ValueNotifier<List<MapObject<dynamic>>>([]);
 
   ValueNotifier<List<MapObject<dynamic>>> get mapObjects => _mapObjects;
@@ -72,8 +80,7 @@ class MarkersController {
     _updateMarkers();
   }
 
-  Future<void> buildBusStops(List<PointMeta> points,
-      {Function(PointMeta)? onTap, double? scale}) async {
+  Future<void> buildBusStops(List<PointMeta> points, {double? scale}) async {
     if (scale != null) {
       _stopScale = scale;
     }
@@ -95,7 +102,7 @@ class MarkersController {
           ),
         ),
         onTap: (obj, point) {
-          onTap?.call(p);
+          onStopMarkerTap.call(p);
         },
       );
       _busStopObjects.add(marker);
@@ -136,8 +143,7 @@ class MarkersController {
     _updateMarkers();
   }
 
-  Future<void> buildBus(List<PointMeta> points,
-      {Function(PointMeta)? onTap, double? scale}) async {
+  Future<void> buildBus(List<PointMeta> points, {double? scale}) async {
     if (scale != null) {
       _busScale = scale;
     }
@@ -157,7 +163,7 @@ class MarkersController {
           ),
         ),
         onTap: (obj, point) {
-          onTap?.call(p);
+          onBusMarkerTap.call(p);
         },
       );
       _busObjects.add(marker);

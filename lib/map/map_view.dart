@@ -30,7 +30,10 @@ class MapView extends StatefulWidget {
 class _MapViewState extends State<MapView> {
   YandexMapController? _mapController;
 
-  final _markersController = MarkersController();
+  late final _markersController = MarkersController(
+    onStopMarkerTap: _onStopTap,
+    onBusMarkerTap: _onBusTap,
+  );
 
   StreamSubscription<Position>? _userPositionSub;
   Position? _currentUserPos;
@@ -55,16 +58,10 @@ class _MapViewState extends State<MapView> {
         ));
       });
     });
-    _markersController.buildBusStops(
-      widget.stops,
-      onTap: _onStopTap,
-    );
+    _markersController.buildBusStops(widget.stops);
     _busesSub = widget.busStream.listen((buses) async {
       _buses = buses;
-      await _markersController.buildBus(
-        _buses,
-        onTap: _onBusTap,
-      );
+      await _markersController.buildBus(_buses);
 
       await _updateBusCameraPos();
     });
@@ -186,12 +183,11 @@ class _MapViewState extends State<MapView> {
 
   void _onScale(CameraPosition pos, CameraUpdateReason reason) {
     if (pos.zoom > 13 && _markersController.busScale != 2) {
-      _markersController.buildBus(_buses, onTap: _onBusTap, scale: 2);
+      _markersController.buildBus(_buses, scale: 2);
     }
 
     if (pos.zoom > 13 && _markersController.stopScale != 2) {
-      _markersController.buildBusStops(widget.stops,
-          onTap: _onStopTap, scale: 2);
+      _markersController.buildBusStops(widget.stops, scale: 2);
     }
 
     if (reason == CameraUpdateReason.application) {
@@ -199,28 +195,25 @@ class _MapViewState extends State<MapView> {
     }
 
     if (pos.zoom <= 13 && pos.zoom > 12 && _markersController.busScale != 1.5) {
-      _markersController.buildBus(_buses, onTap: _onBusTap, scale: 1.5);
+      _markersController.buildBus(_buses, scale: 1.5);
     } else if (pos.zoom <= 12 &&
         pos.zoom > 11 &&
         _markersController.busScale != 1) {
-      _markersController.buildBus(_buses, onTap: _onBusTap, scale: 1);
+      _markersController.buildBus(_buses, scale: 1);
     } else if (pos.zoom <= 11 && _markersController.busScale != 0.7) {
-      _markersController.buildBus(_buses, onTap: _onBusTap, scale: 0.7);
+      _markersController.buildBus(_buses, scale: 0.7);
     }
 
     if (pos.zoom <= 13 &&
         pos.zoom > 12 &&
         _markersController.stopScale != 1.5) {
-      _markersController.buildBusStops(widget.stops,
-          onTap: _onStopTap, scale: 1.5);
+      _markersController.buildBusStops(widget.stops, scale: 1.5);
     } else if (pos.zoom <= 12 &&
         pos.zoom > 11 &&
         _markersController.stopScale != 1) {
-      _markersController.buildBusStops(widget.stops,
-          onTap: _onStopTap, scale: 1);
+      _markersController.buildBusStops(widget.stops, scale: 1);
     } else if (pos.zoom <= 11 && _markersController.stopScale != 0.5) {
-      _markersController.buildBusStops(widget.stops,
-          onTap: _onStopTap, scale: 0.5);
+      _markersController.buildBusStops(widget.stops, scale: 0.5);
     }
   }
 
