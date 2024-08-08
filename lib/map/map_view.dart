@@ -230,7 +230,7 @@ class _MapViewState extends State<MapView> {
                 mapObjects: objects,
                 onCameraPositionChanged: (pos, reason, _) {
                   if (reason == CameraUpdateReason.application) {
-                    reason;
+                    return;
                   }
                   _onScale(pos);
                 },
