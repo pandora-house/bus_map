@@ -67,6 +67,7 @@ flutter:
    - assets/bus_stop_icon.png
    - assets/bus_stop_pressed_icon.png
    - assets/user_locator_icon.png
+   - assets/close_modal_icon.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

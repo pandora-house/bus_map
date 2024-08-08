@@ -35,11 +35,11 @@ class Modals {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                margin: EdgeInsets.only(top: 6),
+                margin: const EdgeInsets.only(top: 6, bottom: 16),
                 width: 37,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Color(0x40003387),
+                  color: const Color(0x40003387),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -52,10 +52,64 @@ class Modals {
   }
 
   static Future<void> showBus(BuildContext context, BusData data) {
-    return _showModal(context, Text(data.number));
+    final child = Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(data.number),
+                  Text(data.route),
+                ],
+              ),
+            ),
+            const _CloseButton(),
+          ],
+        ),
+        const Divider(),
+      ],
+    );
+    return _showModal(context, child);
   }
 
   static Future<void> showBusStop(BuildContext context, BusStopData data) {
-    return _showModal(context, Text(data.name));
+    final child = Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(data.name),
+                  Text(data.street),
+                ],
+              ),
+            ),
+            const _CloseButton(),
+          ],
+        ),
+        const Divider(),
+      ],
+    );
+    return _showModal(context, child);
+  }
+}
+
+class _CloseButton extends StatelessWidget {
+  const _CloseButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: Navigator.of(context).pop,
+      child: Image.asset(
+        'assets/close_modal_icon.png',
+        height: 24,
+        width: 24,
+      ),
+    );
   }
 }
