@@ -9,7 +9,7 @@ import 'package:yandex_mapkit/yandex_mapkit.dart';
 
 import '../models/point_meta.dart';
 
-class MapMarkersController {
+class MarkersController {
   final _mapObjects = ValueNotifier<List<MapObject<dynamic>>>([]);
 
   ValueNotifier<List<MapObject<dynamic>>> get mapObjects => _mapObjects;

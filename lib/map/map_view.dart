@@ -9,7 +9,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:yandex_mapkit/yandex_mapkit.dart';
 
 import 'controllers/locator_controller.dart';
-import 'controllers/map_markers_controller.dart';
+import 'controllers/markers_controller.dart';
 import 'models/point_meta.dart';
 import 'widgets/user_locator_button.dart';
 
@@ -30,7 +30,7 @@ class MapView extends StatefulWidget {
 class _MapViewState extends State<MapView> {
   YandexMapController? _mapController;
 
-  final _markersController = MapMarkersController();
+  final _markersController = MarkersController();
 
   StreamSubscription<Position>? _userPositionSub;
   Position? _currentUserPos;
@@ -134,11 +134,11 @@ class _MapViewState extends State<MapView> {
     );
   }
 
-  void _onStopTap(PointMeta meta) {
+  Future<void> _onStopTap(PointMeta meta) async {
     // анимация кластера сделана нативно, по-этому сначала перемещаем камеру
     // и итолько потом обновляем маркеры
     // https://github.com/Unact/yandex_mapkit/issues/175
-    _mapController?.moveCamera(
+    await _mapController?.moveCamera(
       animation: const MapAnimation(duration: 1),
       CameraUpdate.newCameraPosition(
         CameraPosition(
@@ -148,7 +148,7 @@ class _MapViewState extends State<MapView> {
       ),
     );
 
-    _markersController.showStopPressed(meta);
+    await _markersController.showStopPressed(meta);
 
     if (!mounted) return;
     final data = meta.data as BusStopData;
