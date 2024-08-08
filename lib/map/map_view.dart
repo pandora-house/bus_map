@@ -36,6 +36,7 @@ class _MapViewState extends State<MapView> {
   Position? _currentUserPos;
 
   static const _initCameraZoom = 13.0;
+  static const _maxCameraZoom = 25.0;
 
   var _buses = <PointMeta<BusData>>[];
   late final StreamSubscription<List<PointMeta<BusData>>> _busesSub;
@@ -105,7 +106,7 @@ class _MapViewState extends State<MapView> {
       CameraUpdate.newCameraPosition(
         CameraPosition(
           target: meta.point,
-          zoom: 25,
+          zoom: _maxCameraZoom,
         ),
       ),
     );
@@ -135,15 +136,23 @@ class _MapViewState extends State<MapView> {
   }
 
   Future<void> _onStopTap(PointMeta meta) async {
-    // анимация кластера сделана нативно, по-этому сначала перемещаем камеру
-    // и итолько потом обновляем маркеры
+    final currCameraPos = await _mapController?.getCameraPosition();
+    double bearing = Geolocator.bearingBetween(
+      currCameraPos!.target.latitude,
+      currCameraPos.target.longitude,
+      meta.point.latitude,
+      meta.point.longitude,
+    );
+
+    // анимация кластера сделана нативно промаргивание не избежно,
+    // по-этому сначала перемещаем камер и итолько потом обновляем маркеры
     // https://github.com/Unact/yandex_mapkit/issues/175
     await _mapController?.moveCamera(
-      animation: const MapAnimation(duration: 1),
+      animation: bearing.abs() < 0.005 ? null : const MapAnimation(duration: 1),
       CameraUpdate.newCameraPosition(
         CameraPosition(
           target: meta.point,
-          zoom: 25,
+          zoom: _maxCameraZoom,
         ),
       ),
     );
@@ -220,6 +229,9 @@ class _MapViewState extends State<MapView> {
               return YandexMap(
                 mapObjects: objects,
                 onCameraPositionChanged: (pos, reason, _) {
+                  if (reason == CameraUpdateReason.application) {
+                    reason;
+                  }
                   _onScale(pos);
                 },
                 onMapCreated: (controller) async {

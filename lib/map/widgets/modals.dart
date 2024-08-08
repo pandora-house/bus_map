@@ -17,16 +17,16 @@ class Modals {
       context: context,
       builder: (BuildContext context) {
         return Container(
-          margin: EdgeInsets.only(top: 3),
+          margin: const EdgeInsets.only(top: 3),
           width: double.infinity,
-          padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             boxShadow: [
               BoxShadow(
-                offset: Offset(0, 0),
-                color: Colors.grey,
+                offset: const Offset(0, 0),
+                color: Colors.grey.withOpacity(0.5),
                 blurRadius: 20.0,
               ),
             ],
@@ -34,6 +34,15 @@ class Modals {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              Container(
+                margin: EdgeInsets.only(top: 6),
+                width: 37,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Color(0x40003387),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
               child,
             ],
           ),
