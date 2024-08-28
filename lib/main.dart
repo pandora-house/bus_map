@@ -27,15 +27,15 @@ class _MyAppState extends State<MyApp> {
         body: MapView(
           stops: [
             const PointMeta<BusStopData>(
-              id: 'stop-100',
+              id: 'stop-10',
               point: Point(
                 latitude: 59.139550,
                 longitude: 37.926079,
               ),
-              text: '100',
+              text: '10',
               data: BusStopData(
-                shortName: '100',
-                name: '100-микрорайон',
+                shortName: '10',
+                name: '10-микрорайон',
                 street: 'Ленинградская, 19',
               ),
             ),

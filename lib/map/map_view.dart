@@ -31,12 +31,14 @@ class _MapViewState extends State<MapView> {
   YandexMapController? _mapController;
 
   late final _markersController = MarkersController(
-    onStopMarkerTap: _onStopTap,
-    onBusMarkerTap: _onBusTap,
+    locatorController: LocatorController(),
+    onStopMarkerTap: (point) {
+      _onStopTap(meta: point, mapController: _mapController!, context: context);
+    },
+    onBusMarkerTap: (point) {
+      _onBusTap(meta: point, mapController: _mapController!, context: context);
+    },
   );
-
-  StreamSubscription<Position>? _userPositionSub;
-  Position? _currentUserPos;
 
   static const _initCameraZoom = 13.0;
   static const _maxCameraZoom = 25.0;
@@ -49,15 +51,6 @@ class _MapViewState extends State<MapView> {
   @override
   void initState() {
     super.initState();
-    LocatorController().getPositionUser().then((value) {
-      _userPositionSub = value.listen((pos) {
-        _currentUserPos = pos;
-        _markersController.buildUser(Point(
-          latitude: pos.latitude,
-          longitude: pos.longitude,
-        ));
-      });
-    });
     _markersController.buildBusStops(widget.stops);
     _busesSub = widget.busStream.listen((buses) async {
       _buses = buses;
@@ -70,7 +63,6 @@ class _MapViewState extends State<MapView> {
   @override
   void dispose() {
     _busesSub.cancel();
-    _userPositionSub?.cancel();
     _markersController.dispose();
     _mapController?.dispose();
     super.dispose();
@@ -109,33 +101,14 @@ class _MapViewState extends State<MapView> {
     );
   }
 
-  Future<void> _onUserLocatorTap() async {
-    _currentUserPos ??= await LocatorController().getLastKnownPosition();
-    if (_currentUserPos == null) {
-      return;
-    }
-    _markersController.buildUser(Point(
-      latitude: _currentUserPos!.latitude,
-      longitude: _currentUserPos!.longitude,
-    ));
-
-    await _mapController?.moveCamera(
-      CameraUpdate.newCameraPosition(
-        CameraPosition(
-          target: Point(
-            latitude: _currentUserPos!.latitude,
-            longitude: _currentUserPos!.longitude,
-          ),
-          zoom: 15,
-        ),
-      ),
-    );
-  }
-
-  Future<void> _onStopTap(PointMeta meta) async {
-    final currCameraPos = await _mapController?.getCameraPosition();
+  Future<void> _onStopTap({
+    required PointMeta meta,
+    required YandexMapController mapController,
+    required BuildContext context,
+  }) async {
+    final currCameraPos = await mapController.getCameraPosition();
     double bearing = Geolocator.bearingBetween(
-      currCameraPos!.target.latitude,
+      currCameraPos.target.latitude,
       currCameraPos.target.longitude,
       meta.point.latitude,
       meta.point.longitude,
@@ -144,7 +117,7 @@ class _MapViewState extends State<MapView> {
     // анимация кластера сделана нативно промаргивание не избежно,
     // по-этому сначала перемещаем камер и итолько потом обновляем маркеры
     // https://github.com/Unact/yandex_mapkit/issues/175
-    await _mapController?.moveCamera(
+    await mapController.moveCamera(
       animation: bearing.abs() < 0.005 ? null : const MapAnimation(duration: 1),
       CameraUpdate.newCameraPosition(
         CameraPosition(
@@ -156,21 +129,25 @@ class _MapViewState extends State<MapView> {
 
     await _markersController.showStopPressed(meta);
 
-    if (!mounted) return;
+    if (!context.mounted) return;
     final data = meta.data as BusStopData;
     Modals.showBusStop(context, data).then((_) {
       _markersController.hideStopPressed(meta);
     });
   }
 
-  Future<void> _onBusTap(PointMeta meta) async {
+  Future<void> _onBusTap({
+    required PointMeta meta,
+    required YandexMapController mapController,
+    required BuildContext context,
+  }) async {
     _busTap = meta as PointMeta<BusData>;
     Modals.showBus(context, meta.data).then((_) {
       _busTap = null;
     });
 
     await Future.delayed(const Duration(milliseconds: 500));
-    await _mapController?.moveCamera(
+    await mapController.moveCamera(
       animation: const MapAnimation(duration: 1),
       CameraUpdate.newCameraPosition(
         CameraPosition(
@@ -179,42 +156,6 @@ class _MapViewState extends State<MapView> {
         ),
       ),
     );
-  }
-
-  void _onScale(CameraPosition pos, CameraUpdateReason reason) {
-    if (pos.zoom > 13 && _markersController.busScale != 2) {
-      _markersController.buildBus(_buses, scale: 2);
-    }
-
-    if (pos.zoom > 13 && _markersController.stopScale != 2) {
-      _markersController.buildBusStops(widget.stops, scale: 2);
-    }
-
-    if (reason == CameraUpdateReason.application) {
-      return;
-    }
-
-    if (pos.zoom <= 13 && pos.zoom > 12 && _markersController.busScale != 1.5) {
-      _markersController.buildBus(_buses, scale: 1.5);
-    } else if (pos.zoom <= 12 &&
-        pos.zoom > 11 &&
-        _markersController.busScale != 1) {
-      _markersController.buildBus(_buses, scale: 1);
-    } else if (pos.zoom <= 11 && _markersController.busScale != 0.7) {
-      _markersController.buildBus(_buses, scale: 0.7);
-    }
-
-    if (pos.zoom <= 13 &&
-        pos.zoom > 12 &&
-        _markersController.stopScale != 1.5) {
-      _markersController.buildBusStops(widget.stops, scale: 1.5);
-    } else if (pos.zoom <= 12 &&
-        pos.zoom > 11 &&
-        _markersController.stopScale != 1) {
-      _markersController.buildBusStops(widget.stops, scale: 1);
-    } else if (pos.zoom <= 11 && _markersController.stopScale != 0.5) {
-      _markersController.buildBusStops(widget.stops, scale: 0.5);
-    }
   }
 
   @override
@@ -228,7 +169,12 @@ class _MapViewState extends State<MapView> {
               return YandexMap(
                 mapObjects: objects,
                 onCameraPositionChanged: (pos, reason, _) {
-                  _onScale(pos, reason);
+                  _markersController.onScale(
+                    pos: pos,
+                    reason: reason,
+                    stops: widget.stops,
+                    buses: _buses,
+                  );
                 },
                 onMapCreated: (controller) async {
                   _mapController = controller;
@@ -244,7 +190,9 @@ class _MapViewState extends State<MapView> {
             },
           ),
           UserLocatorButton(
-            onTap: _onUserLocatorTap,
+            onTap: () {
+              _markersController.onUserLocatorTap(_mapController!);
+            },
           ),
         ],
       ),

@@ -4,23 +4,42 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:image/image.dart' as img;
 import 'package:yandex_mapkit/yandex_mapkit.dart';
 
+import '../models/bus_data.dart';
+import '../models/bus_stop_data.dart';
 import '../models/point_meta.dart';
+import 'locator_controller.dart';
 
 class MarkersController {
   MarkersController({
     required this.onStopMarkerTap,
     required this.onBusMarkerTap,
-  });
+    required this.locatorController,
+  }) {
+    locatorController.getPositionUser().then((value) {
+      _userPositionSub = value.listen((pos) {
+        _currentUserPos = pos;
+        _buildUser(Point(
+          latitude: pos.latitude,
+          longitude: pos.longitude,
+        ));
+      });
+    });
+  }
 
   final void Function(PointMeta meta) onStopMarkerTap;
   final void Function(PointMeta meta) onBusMarkerTap;
+  final LocatorController locatorController;
+  late final StreamSubscription<Position>? _userPositionSub;
 
   final _mapObjects = ValueNotifier<List<MapObject<dynamic>>>([]);
 
   ValueNotifier<List<MapObject<dynamic>>> get mapObjects => _mapObjects;
+
+  Position? _currentUserPos;
 
   final _userMarkerId = const MapObjectId('user_placemark');
   final _busStopPressedMarkerId =
@@ -45,12 +64,70 @@ class MarkersController {
 
   double get stopScale => _stopScale;
 
+  Future<void> onUserLocatorTap(YandexMapController mapController) async {
+    _currentUserPos ??= await LocatorController().getLastKnownPosition();
+    if (_currentUserPos == null) {
+      return;
+    }
+    _buildUser(Point(
+      latitude: _currentUserPos!.latitude,
+      longitude: _currentUserPos!.longitude,
+    ));
+
+    await mapController.moveCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(
+          target: Point(
+            latitude: _currentUserPos!.latitude,
+            longitude: _currentUserPos!.longitude,
+          ),
+          zoom: 15,
+        ),
+      ),
+    );
+  }
+
   void _updateMarkers() {
     _mapObjects.value = [
       _stopsCluster(_busStopObjects),
       _userObject,
       ..._busObjects,
     ];
+  }
+
+  void onScale({
+    required CameraPosition pos,
+    required CameraUpdateReason reason,
+    required List<PointMeta<BusStopData>> stops,
+    required List<PointMeta<BusData>> buses,
+  }) {
+    if (pos.zoom > 13 && busScale != 2) {
+      buildBus(buses, scale: 2);
+    }
+
+    if (pos.zoom > 13 && stopScale != 2) {
+      buildBusStops(stops, scale: 2);
+    }
+
+    if (reason == CameraUpdateReason.application) {
+      return;
+    }
+
+    if (pos.zoom <= 13 && pos.zoom > 12 && busScale != 1.5) {
+      buildBus(buses, scale: 1.5);
+    } else if (pos.zoom <= 12 && pos.zoom > 11 && busScale != 1) {
+      buildBus(buses, scale: 1);
+    } else if (pos.zoom <= 11 && busScale != 0.7) {
+      buildBus(buses, scale: 0.7);
+    }
+
+    if (pos.zoom <= 13 && pos.zoom > 12 && stopScale != 1.5) {
+      buildBusStops(stops, scale: 1.5);
+    } else if (pos.zoom <= 12 && pos.zoom > 11 && stopScale != 1) {
+      buildBusStops(stops, scale: 1);
+    } else if (pos.zoom <= 11 && stopScale != 0.5) {
+      buildBusStops(stops, scale: 0.5);
+    }
   }
 
   ClusterizedPlacemarkCollection _stopsCluster(List<PlacemarkMapObject> marks) {
@@ -63,7 +140,7 @@ class MarkersController {
     );
   }
 
-  void buildUser(Point point) {
+  void _buildUser(Point point) {
     _userObject = PlacemarkMapObject(
       mapId: _userMarkerId,
       point: point,
@@ -342,5 +419,6 @@ class MarkersController {
 
   void dispose() {
     _mapObjects.dispose();
+    _userPositionSub?.cancel();
   }
 }
